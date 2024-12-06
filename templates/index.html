@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YT Downloader</title>
+    <style>
+        /* General Reset */
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #4CAF50, #8BC34A);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* Loader Styles */
+        .loader-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #4CAF50;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Main Container */
+        .container {
+            text-align: center;
+            background: #fff;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 600px;
+        }
+
+        /* Website Name */
+        .website-name {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+
+        /* Title */
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        /* Input Section */
+        .input-group {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #4CAF50;
+            border-radius: 5px 0 0 5px;
+            outline: none;
+        }
+
+        .input-group button {
+            background: #4CAF50;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .input-group button:hover {
+            background: #45A049;
+        }
+
+        /* Table */
+        .formats-table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+
+        .formats-table th,
+        .formats-table td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        .formats-table th {
+            background: #f4f4f4;
+        }
+
+        .formats-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .formats-table tr:hover {
+            background: #f1f1f1;
+        }
+
+        .formats-table button {
+            background: #2196F3;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        .formats-table button:hover {
+            background: #0b7dda;
+        }
+
+        /* Video Info */
+        .video-info {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .video-info img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .video-info .video-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 10px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loader -->
+    <div class="loader-overlay" id="loader-overlay">
+        <div class="loader"></div>
+    </div>
+
+    <div class="container">
+        <!-- Website Name -->
+        <div class="website-name">YTM Downloader</div>
+
+        <div class="title">Download YouTube Videos Instantly</div>
+
+        <div class="input-group">
+            <input type="text" id="youtube-url" placeholder="Enter YouTube URL here">
+            <button onclick="fetchFormats()">Fetch Formats</button>
+        </div>
+
+        <div class="video-info" id="video-info">
+            <img id="video-thumbnail" src="" alt="Video Thumbnail">
+            <div class="video-title" id="video-title"></div>
+        </div>
+
+        <table class="formats-table" id="formats-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Extension</th>
+                    <th>Resolution</th>
+                    <th>Size</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="formats-table-body">
+                <!-- Rows dynamically inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Show Loader
+        function showLoader() {
+            document.getElementById('loader-overlay').style.display = 'flex';
+        }
+
+        // Hide Loader
+        function hideLoader() {
+            document.getElementById('loader-overlay').style.display = 'none';
+        }
+
+        async function fetchFormats() {
+            const url = document.getElementById('youtube-url').value.trim();
+            if (!url) {
+                alert('Please enter a valid YouTube URL');
+                return;
+            }
+
+            showLoader(); // Show loader while fetching formats
+
+            try {
+                const response = await fetch('/get-formats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to fetch formats');
+                }
+
+                const data = await response.json();
+                const tableBody = document.getElementById('formats-table-body');
+                tableBody.innerHTML = ''; // Clear previous data
+
+                if (!data.formats || data.formats.length === 0) {
+                    alert('No downloadable formats found.');
+                    return;
+                }
+
+                // Display video info
+                document.getElementById('video-thumbnail').src = data.thumbnail;
+                document.getElementById('video-title').textContent = data.title;
+                document.getElementById('video-info').style.display = 'block';
+
+                data.formats.forEach(format => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${format.ID}</td>
+                        <td>${format.Ext}</td>
+                        <td>${format.Resolution}</td>
+                        <td>${format.Size}</td>
+                        <td><button onclick="downloadVideo('${url}', '${format.ID}')">Download</button></td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching formats:', error);
+                alert(error.message || 'Something went wrong while fetching formats.');
+            } finally {
+                hideLoader(); // Hide loader after fetching formats
+            }
+        }
+
+        async function downloadVideo(url, formatCode) {
+            showLoader(); // Show loader while downloading
+
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, format_code: formatCode })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to download video');
+                }
+
+                const blob = await response.blob();
+                const downloadUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `video_${formatCode}.mp4`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } catch (error) {
+                console.error('Error downloading video:', error);
+                alert(error.message || 'Something went wrong while downloading.');
+            } finally {
+                hideLoader(); // Hide loader after downloading
+            }
+        }
+    </script>
+</body>
+</html>
